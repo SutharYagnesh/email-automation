@@ -5,7 +5,6 @@ from config import Config
 _client = None
 
 def get_db():
-    """Simple, reliable PyMongo connection helper with SSL TLS fallback."""
     global _client
     if _client is None:
         try:

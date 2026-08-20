@@ -1,14 +1,34 @@
 // Main UI Interaction JS
 document.addEventListener("DOMContentLoaded", () => {
-  // Mobile Sidebar Drawer Toggle
+  // Mobile Sidebar Drawer Toggle & Backdrop Overlay
   const toggleBtn = document.getElementById("mobile-sidebar-toggle");
   const sidebar = document.getElementById("sidebar");
+  const backdrop = document.getElementById("sidebar-backdrop");
+
+  function closeSidebar() {
+    if (sidebar) sidebar.classList.remove("active");
+    if (backdrop) backdrop.classList.remove("active");
+  }
 
   if (toggleBtn && sidebar) {
     toggleBtn.addEventListener("click", () => {
       sidebar.classList.toggle("active");
+      if (backdrop) backdrop.classList.toggle("active");
     });
   }
+
+  if (backdrop) {
+    backdrop.addEventListener("click", closeSidebar);
+  }
+
+  // Auto-close sidebar on mobile when tapping navigation links
+  document.querySelectorAll(".sidebar-nav .nav-item").forEach((link) => {
+    link.addEventListener("click", () => {
+      if (window.innerWidth <= 992) {
+        closeSidebar();
+      }
+    });
+  });
 
   // Modal Open/Close Event Listeners
   document.querySelectorAll("[data-modal-target]").forEach((trigger) => {
