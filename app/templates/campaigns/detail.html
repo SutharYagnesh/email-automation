@@ -1,0 +1,249 @@
+{% extends "base.html" %}
+
+{% block title %}{{ campaign.name }} Analytics - Bulk Email Automation{% endblock %}
+{% block page_title %}Campaign Analytics{% endblock %}
+
+{% block content %}
+<!-- Top Campaign Status Banner -->
+<div class="card" style="margin-bottom: 24px; padding: 24px;">
+  <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 16px;">
+    <div>
+      <div style="display: flex; align-items: center; gap: 12px;">
+        <h2 style="font-size: 1.4rem; font-weight: 700;">{{ campaign.name }}</h2>
+        <span class="badge badge-{{ 'success' if campaign.status == 'completed' else 'primary' if campaign.status == 'sending' else 'secondary' }}" id="campaign-status-badge">
+          {{ campaign.status }}
+        </span>
+      </div>
+      <div style="font-size: 0.85rem; color: var(--text-muted); margin-top: 6px;">
+        Sender: <strong>{{ campaign.sender_username }}</strong> • Active Template: <strong>{{ campaign.template_name }}</strong> • Sending Delay: <strong>{{ campaign.delay_seconds }}s</strong>
+      </div>
+    </div>
+
+    <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+      {% if campaign.status != 'sending' %}
+      <button class="btn btn-primary" data-modal-target="add-sends-modal">
+        <i class="fa-solid fa-paper-plane"></i> Send Additional Emails
+      </button>
+      {% endif %}
+
+      {% if campaign.status == 'draft' %}
+      <form method="POST" action="{{ url_for('campaigns.launch', campaign_id=campaign._id) }}">
+        <button type="submit" class="btn btn-primary">
+          <i class="fa-solid fa-play"></i> Launch Campaign Now
+        </button>
+      </form>
+      {% endif %}
+
+      <form method="POST" action="{{ url_for('campaigns.delete', campaign_id=campaign._id) }}" onsubmit="return confirm('Delete this campaign and all associated email logs?');">
+        <button type="submit" class="btn btn-danger">
+          <i class="fa-solid fa-trash"></i> Delete Campaign
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Live Progress Bar -->
+  <div style="margin-top: 20px;">
+    <div style="display: flex; justify-content: space-between; font-size: 0.85rem; font-weight: 600; margin-bottom: 6px;">
+      <span>Dispatch Progress</span>
+      <span id="progress-text">{{ campaign.sent_count }} / {{ campaign.total_recipients }} Sent</span>
+    </div>
+    <div class="progress-bar-container">
+      {% set pct = (campaign.sent_count / campaign.total_recipients * 100) if campaign.total_recipients > 0 else 0 %}
+      <div class="progress-bar-fill" id="progress-fill" style="width: {{ pct }}%;"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Campaign KPI Stats Cards -->
+<div class="stats-grid">
+  <div class="card stat-card">
+    <div class="stat-header">
+      <span class="stat-title">Total Recipients</span>
+      <div class="stat-icon primary"><i class="fa-solid fa-users"></i></div>
+    </div>
+    <div class="stat-value">{{ campaign.total_recipients }}</div>
+  </div>
+
+  <div class="card stat-card">
+    <div class="stat-header">
+      <span class="stat-title">Sent</span>
+      <div class="stat-icon info"><i class="fa-solid fa-paper-plane"></i></div>
+    </div>
+    <div class="stat-value">{{ campaign.sent_count }}</div>
+  </div>
+
+  <div class="card stat-card">
+    <div class="stat-header">
+      <span class="stat-title">Delivered</span>
+      <div class="stat-icon success"><i class="fa-solid fa-check-double"></i></div>
+    </div>
+    <div class="stat-value">{{ campaign.delivered_count }}</div>
+  </div>
+
+  <div class="card stat-card">
+    <div class="stat-header">
+      <span class="stat-title">Opened / Read</span>
+      <div class="stat-icon warning"><i class="fa-solid fa-envelope-open-text"></i></div>
+    </div>
+    <div class="stat-value">{{ campaign.opened_count }}</div>
+  </div>
+
+  <div class="card stat-card">
+    <div class="stat-header">
+      <span class="stat-title">Replied</span>
+      <div class="stat-icon success"><i class="fa-solid fa-reply"></i></div>
+    </div>
+    <div class="stat-value">{{ campaign.replied_count }}</div>
+  </div>
+
+  <div class="card stat-card">
+    <div class="stat-header">
+      <span class="stat-title">Failed</span>
+      <div class="stat-icon danger"><i class="fa-solid fa-triangle-exclamation"></i></div>
+    </div>
+    <div class="stat-value">{{ campaign.failed_count }}</div>
+  </div>
+</div>
+
+<!-- Detailed Recipient Logs Table -->
+<div class="table-card">
+  <div class="table-header-bar">
+    <h3 style="font-size: 1.1rem; font-weight: 700;">Recipient Delivery Log</h3>
+  </div>
+
+  <div class="table-responsive">
+    <table class="custom-table">
+      <thead>
+        <tr>
+          <th>Recipient</th>
+          <th>Subject Line</th>
+          <th>Sent Time</th>
+          <th>Status</th>
+          <th>Opened Time</th>
+          <th>Replied Time</th>
+          <th>Error / Details</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% if campaign.sent_emails %}
+          {% for log in campaign.sent_emails %}
+          <tr>
+            <td>
+              <strong style="color: var(--text-main);">{{ log.recipient_email }}</strong>
+              {% if log.recipient_name %}
+                <div style="font-size: 0.75rem; color: var(--text-muted);">{{ log.recipient_name }}</div>
+              {% endif %}
+            </td>
+            <td>{{ log.subject }}</td>
+            <td>{{ log.sent_at.strftime('%b %d, %H:%M:%S') if log.sent_at else '-' }}</td>
+            <td>
+              <span class="badge badge-{{ 'success' if log.status == 'replied' else 'warning' if log.status == 'opened' else 'info' if log.status == 'delivered' else 'danger' if log.status == 'failed' else 'secondary' }}">
+                {{ log.status }}
+              </span>
+            </td>
+            <td>{{ log.opened_at.strftime('%b %d, %H:%M:%S') if log.opened_at else '-' }}</td>
+            <td>{{ log.replied_at.strftime('%b %d, %H:%M:%S') if log.replied_at else '-' }}</td>
+            <td>
+              {% if log.error_message %}
+                <span style="font-size: 0.75rem; color: var(--danger);">{{ log.error_message }}</span>
+              {% else %}
+                <span style="color: var(--text-muted); font-size: 0.8rem;">-</span>
+              {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        {% else %}
+          <tr>
+            <td colspan="7" style="text-align: center; color: var(--text-muted); padding: 32px;">
+              No dispatch logs yet. Click "Send Additional Emails" or "Launch Campaign" to dispatch emails.
+            </td>
+          </tr>
+        {% endif %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Modal: Send Additional Emails to Same Campaign -->
+<div class="modal-overlay" id="add-sends-modal">
+  <div class="modal-content" style="max-width: 650px;">
+    <div class="modal-header">
+      <h3 class="modal-title"><i class="fa-solid fa-paper-plane" style="color:var(--primary);"></i> Send Additional Emails</h3>
+      <button class="modal-close">&times;</button>
+    </div>
+    <form method="POST" action="{{ url_for('campaigns.add_sends', campaign_id=campaign._id) }}">
+      <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 16px;">
+        Dispatch additional emails under <strong>{{ campaign.name }}</strong>. You can change the email template or target additional groups/contacts. Un-sent recipients will receive the email.
+      </p>
+
+      <div class="form-group">
+        <label class="form-label">Email Template (Select or Change)</label>
+        <select name="template_id" class="form-control" required>
+          {% for t in templates %}
+            <option value="{{ t._id }}" {% if t._id == campaign.template_id %}selected{% endif %}>{{ t.name }} (Subject: {{ t.subject }})</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="form-group" style="background: #f8fafc; padding: 16px; border-radius: var(--radius-sm); border: 1px solid var(--border-color);">
+        <label class="form-label">Select Target Audience</label>
+        <div style="display: flex; gap: 20px; margin-bottom: 10px;">
+          <label style="font-size:0.85rem; font-weight:600; display:flex; align-items:center; gap:6px;">
+            <input type="radio" name="recipient_type" value="groups" id="add_type_groups" checked onchange="toggleAddSendsAudience()"> Contact Groups
+          </label>
+          <label style="font-size:0.85rem; font-weight:600; display:flex; align-items:center; gap:6px;">
+            <input type="radio" name="recipient_type" value="contacts" id="add_type_contacts" onchange="toggleAddSendsAudience()"> Specific Contacts
+          </label>
+        </div>
+
+        <div id="add_groups_container">
+          <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px;">
+            {% for g in groups %}
+              <label style="font-size: 0.85rem; display: flex; align-items: center; gap: 6px;">
+                <input type="checkbox" name="group_ids" value="{{ g._id }}" {% if g._id in campaign.group_ids %}checked{% endif %}> {{ g.name }} ({{ g.contact_count }})
+              </label>
+            {% endfor %}
+          </div>
+        </div>
+
+        <div id="add_contacts_container" style="display: none; max-height: 160px; overflow-y: auto;">
+          <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px;">
+            {% for c in contacts %}
+              {% if not c.unsubscribed %}
+              <label style="font-size: 0.85rem; display: flex; align-items: center; gap: 6px;">
+                <input type="checkbox" name="contact_ids" value="{{ c._id }}"> {{ c.email }}
+              </label>
+              {% endif %}
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Sending Delay (seconds between emails)</label>
+        <input type="number" step="0.5" min="0.5" max="60" name="delay_seconds" class="form-control" value="{{ campaign.delay_seconds or 2.0 }}" required>
+      </div>
+
+      <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 24px;">
+        <button type="button" class="btn btn-secondary" data-modal-close>Cancel</button>
+        <button type="submit" class="btn btn-primary"><i class="fa-solid fa-paper-plane"></i> Launch Additional Send</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function toggleAddSendsAudience() {
+  const isGroups = document.getElementById("add_type_groups").checked;
+  document.getElementById("add_groups_container").style.display = isGroups ? "block" : "none";
+  document.getElementById("add_contacts_container").style.display = !isGroups ? "block" : "none";
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+  pollCampaignProgress("{{ campaign._id }}");
+});
+</script>
+{% endblock %}

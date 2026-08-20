@@ -1,0 +1,115 @@
+{% extends "base.html" %}
+
+{% block title %}Create Email Campaign - Bulk Email Automation{% endblock %}
+{% block page_title %}New Campaign Setup{% endblock %}
+
+{% block content %}
+<div class="card" style="max-width: 800px; margin: 0 auto; padding: 32px;">
+  <form method="POST" action="{{ url_for('campaigns.create') }}">
+    <div style="margin-bottom: 24px; padding-bottom: 16px; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center;">
+      <div>
+        <h2 style="font-size: 1.25rem; font-weight: 700;">Campaign Configuration</h2>
+        <p style="color: var(--text-muted); font-size: 0.85rem;">Setup audience, template, and sending rate</p>
+      </div>
+      <span class="badge badge-primary" id="recipient-count-badge" style="font-size: 0.9rem; padding: 6px 12px;">
+        0 Recipients
+      </span>
+    </div>
+
+    <!-- Step 1: Campaign Details -->
+    <div class="form-group">
+      <label class="form-label">Campaign Name *</label>
+      <input type="text" name="name" class="form-control" placeholder="Q3 Product Announcement Campaign" required>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">Select Gmail Sender Account *</label>
+      <select name="sender_id" class="form-control" required>
+        <option value="">-- Choose Sender Account --</option>
+        {% for s in senders %}
+          <option value="{{ s._id }}">{{ s.sender_name }} ({{ s.username }}) - Status: {{ s.status }}</option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <!-- Step 2: Target Audience -->
+    <div class="form-group" style="background: #f8fafc; padding: 16px; border-radius: var(--radius-sm); border: 1px solid var(--border-color);">
+      <label class="form-label">Target Audience Selection *</label>
+      
+      <div style="display: flex; gap: 24px; margin-bottom: 12px;">
+        <label style="font-weight: 600; font-size: 0.9rem; display: flex; align-items: center; gap: 6px;">
+          <input type="radio" name="recipient_type" value="groups" id="recipient_type_groups" checked onchange="updateRecipientPreview()">
+          Select Contact Groups
+        </label>
+        <label style="font-weight: 600; font-size: 0.9rem; display: flex; align-items: center; gap: 6px;">
+          <input type="radio" name="recipient_type" value="contacts" id="recipient_type_contacts" onchange="updateRecipientPreview()">
+          Select Specific Contacts
+        </label>
+      </div>
+
+      <!-- Groups selection checkboxes -->
+      <div id="group_select_container">
+        <label class="form-label" style="font-size: 0.8rem;">Select Groups:</label>
+        <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 8px;">
+          {% for g in groups %}
+            <label style="font-size: 0.85rem; display: flex; align-items: center; gap: 6px;">
+              <input type="checkbox" name="group_ids" value="{{ g._id }}" onchange="updateRecipientPreview()"> {{ g.name }} ({{ g.contact_count }})
+            </label>
+          {% endfor %}
+        </div>
+      </div>
+
+      <!-- Individual Contacts selection checkboxes -->
+      <div id="contact_select_container" style="display: none; max-height: 200px; overflow-y: auto;">
+        <label class="form-label" style="font-size: 0.8rem;">Select Contacts:</label>
+        <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 6px;">
+          {% for c in contacts %}
+            {% if not c.unsubscribed %}
+            <label style="font-size: 0.85rem; display: flex; align-items: center; gap: 6px;">
+              <input type="checkbox" name="contact_ids" value="{{ c._id }}" onchange="updateRecipientPreview()"> {{ c.email }}
+            </label>
+            {% endif %}
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+
+    <!-- Step 3: Select Template -->
+    <div class="form-group">
+      <label class="form-label">Select Email Template *</label>
+      <select name="template_id" class="form-control" required>
+        <option value="">-- Choose Template --</option>
+        {% for t in templates %}
+          <option value="{{ t._id }}">{{ t.name }} (Subject: {{ t.subject }})</option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <!-- Step 4: Throttling & Rate Limit -->
+    <div class="form-group">
+      <label class="form-label">Sending Rate Throttling (Delay between emails in seconds)</label>
+      <input type="number" step="0.5" min="0.5" max="60" name="delay_seconds" class="form-control" value="2.0" required>
+      <span style="font-size: 0.75rem; color: var(--text-muted); display: block; margin-top: 4px;">
+        Recommended: 2.0 to 5.0 seconds per email to maintain high deliverability and avoid sudden spikes.
+      </span>
+    </div>
+
+    <!-- Actions -->
+    <div style="display: flex; justify-content: flex-end; gap: 12px; margin-top: 32px; padding-top: 16px; border-top: 1px solid var(--border-color);">
+      <a href="{{ url_for('campaigns.index') }}" class="btn btn-secondary">Cancel</a>
+      <button type="submit" name="auto_launch" value="0" class="btn btn-secondary">Save Draft</button>
+      <button type="submit" name="auto_launch" value="1" class="btn btn-primary">
+        <i class="fa-solid fa-paper-plane"></i> Save & Launch Campaign Now
+      </button>
+    </div>
+  </form>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+  updateRecipientPreview();
+});
+</script>
+{% endblock %}

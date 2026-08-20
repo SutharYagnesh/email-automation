@@ -1,0 +1,116 @@
+{% extends "base.html" %}
+
+{% block title %}Groups & Labels - Bulk Email Automation{% endblock %}
+{% block page_title %}Groups & Labels Management{% endblock %}
+
+{% block content %}
+<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 32px;">
+  <!-- Contact Groups Section -->
+  <div>
+    <div class="card" style="margin-bottom: 24px;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+        <h3 style="font-size: 1.1rem; font-weight: 700;">Contact Groups</h3>
+        <button class="btn btn-primary btn-sm" data-modal-target="add-group-modal">
+          <i class="fa-solid fa-plus"></i> New Group
+        </button>
+      </div>
+
+      <div style="display: flex; flex-direction: column; gap: 12px;">
+        {% if groups %}
+          {% for g in groups %}
+          <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px 16px; border: 1px solid var(--border-color); border-radius: var(--radius-sm); background: var(--bg-surface);">
+            <div>
+              <strong style="font-size: 0.95rem;">{{ g.name }}</strong>
+              <div style="font-size: 0.8rem; color: var(--text-muted);">{{ g.description or 'No description' }} • {{ g.contact_count }} contacts</div>
+            </div>
+            <form method="POST" action="{{ url_for('groups.remove_group', group_id=g._id) }}" onsubmit="return confirm('Delete this group?');">
+              <button type="submit" class="btn btn-danger btn-sm" style="padding: 4px 8px;"><i class="fa-solid fa-trash"></i></button>
+            </form>
+          </div>
+          {% endfor %}
+        {% else %}
+          <p style="color: var(--text-muted); font-size: 0.9rem;">No groups created yet.</p>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <!-- Contact Labels Section -->
+  <div>
+    <div class="card">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+        <h3 style="font-size: 1.1rem; font-weight: 700;">Tags & Labels</h3>
+        <button class="btn btn-secondary btn-sm" data-modal-target="add-label-modal">
+          <i class="fa-solid fa-tag"></i> New Label
+        </button>
+      </div>
+
+      <div style="display: flex; flex-direction: column; gap: 12px;">
+        {% if labels %}
+          {% for l in labels %}
+          <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px 16px; border: 1px solid var(--border-color); border-radius: var(--radius-sm); background: var(--bg-surface);">
+            <div style="display: flex; align-items: center; gap: 10px;">
+              <span style="width: 14px; height: 14px; border-radius: 50%; background-color: {{ l.color }}; display: inline-block;"></span>
+              <strong style="font-size: 0.95rem;">{{ l.name }}</strong>
+            </div>
+            <form method="POST" action="{{ url_for('groups.remove_label', label_id=l._id) }}" onsubmit="return confirm('Delete label?');">
+              <button type="submit" class="btn btn-danger btn-sm" style="padding: 4px 8px;"><i class="fa-solid fa-trash"></i></button>
+            </form>
+          </div>
+          {% endfor %}
+        {% else %}
+          <p style="color: var(--text-muted); font-size: 0.9rem;">No labels created yet.</p>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Add Group -->
+<div class="modal-overlay" id="add-group-modal">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h3 class="modal-title">Create Contact Group</h3>
+      <button class="modal-close">&times;</button>
+    </div>
+    <form method="POST" action="{{ url_for('groups.add_group') }}">
+      <div class="form-group">
+        <label class="form-label">Group Name *</label>
+        <input type="text" name="name" class="form-control" placeholder="VIP Clients or Newsletter Leads" required>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Description</label>
+        <textarea name="description" class="form-control" placeholder="Optional details..."></textarea>
+      </div>
+      <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 24px;">
+        <button type="button" class="btn btn-secondary" data-modal-close>Cancel</button>
+        <button type="submit" class="btn btn-primary">Create Group</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Modal: Add Label -->
+<div class="modal-overlay" id="add-label-modal">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h3 class="modal-title">Create Tag / Label</h3>
+      <button class="modal-close">&times;</button>
+    </div>
+    <form method="POST" action="{{ url_for('groups.add_label') }}">
+      <div class="form-group">
+        <label class="form-label">Label Name *</label>
+        <input type="text" name="name" class="form-control" placeholder="Hot Lead, Customer, Partner" required>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Label Color</label>
+        <input type="color" name="color" class="form-control" value="#3b82f6" style="height: 44px; padding: 4px;">
+      </div>
+      <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 24px;">
+        <button type="button" class="btn btn-secondary" data-modal-close>Cancel</button>
+        <button type="submit" class="btn btn-primary">Save Label</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

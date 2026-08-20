@@ -1,0 +1,324 @@
+{% extends "base.html" %}
+
+{% block title %}Email Contacts - Bulk Email Automation{% endblock %}
+{% block page_title %}Contacts Directory{% endblock %}
+
+{% block content %}
+<div class="table-card">
+  <form id="bulk-contacts-form" method="POST" action="{{ url_for('contacts.bulk_group_assign') }}">
+    <div class="table-header-bar">
+      <div style="display: flex; gap: 12px; align-items: center; flex-wrap: wrap;">
+        <div style="display: flex; gap: 8px;">
+          <input type="text" id="contact-search-input" class="form-control" placeholder="Filter list below..." style="width: 200px;" onkeyup="filterContactsTable()">
+          
+          <select class="form-control" style="width: 150px;" onchange="window.location.href='{{ url_for('contacts.index') }}?group_id=' + this.value">
+            <option value="">All Groups</option>
+            {% for g in groups %}
+              <option value="{{ g._id }}" {% if selected_group == g._id %}selected{% endif %}>{{ g.name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <!-- Bulk Group Assign Controls -->
+        <div style="display: flex; gap: 8px; align-items: center; border-left: 1px solid var(--border-color); padding-left: 12px;">
+          <select name="group_id" class="form-control" style="width: 170px;" required>
+            <option value="">-- Add Selected to Group --</option>
+            {% for g in groups %}
+              <option value="{{ g._id }}">{{ g.name }}</option>
+            {% endfor %}
+          </select>
+          <button type="submit" class="btn btn-secondary btn-sm">
+            <i class="fa-solid fa-layer-group"></i> Assign Group
+          </button>
+        </div>
+      </div>
+
+      <div style="display: flex; gap: 10px; align-items: center;">
+        <button type="button" class="btn btn-secondary btn-sm" data-modal-target="manage-groups-modal">
+          <i class="fa-solid fa-tags"></i> Manage Groups
+        </button>
+        <button type="button" class="btn btn-secondary btn-sm" data-modal-target="import-modal">
+          <i class="fa-solid fa-file-import"></i> Import CSV/XLSX
+        </button>
+        <button type="button" class="btn btn-primary btn-sm" data-modal-target="add-contact-modal">
+          <i class="fa-solid fa-user-plus"></i> Add Contact
+        </button>
+      </div>
+    </div>
+
+    <div class="table-responsive">
+      <table class="custom-table" id="contacts-table">
+        <thead>
+          <tr>
+            <th style="width: 40px; text-align: center;">
+              <input type="checkbox" id="select-all-contacts" onclick="toggleSelectAllContacts(this)">
+            </th>
+            <th>Email Address</th>
+            <th>Name</th>
+            <th>Company</th>
+            <th>Custom Fields</th>
+            <th>Groups</th>
+            <th>Status</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% if contacts %}
+            {% for c in contacts %}
+            <tr>
+              <td style="text-align: center;">
+                <input type="checkbox" name="contact_ids" value="{{ c._id }}" class="contact-checkbox">
+              </td>
+              <td>
+                <strong style="color: var(--text-main);">{{ c.email }}</strong>
+              </td>
+              <td>{{ c.name or '-' }}</td>
+              <td>{{ c.company_name or '-' }}</td>
+              <td>
+                {% if c.custom_fields %}
+                  {% for k, v in c.custom_fields.items() %}
+                    <span class="badge badge-secondary" style="font-size: 0.7rem;">{{ k }}: {{ v }}</span>
+                  {% endfor %}
+                {% else %}
+                  <span style="color: var(--text-muted); font-size: 0.8rem;">None</span>
+                {% endif %}
+              </td>
+              <td>
+                {% for g in groups %}
+                  {% if g._id in c.group_ids %}
+                    <span class="badge badge-primary" style="font-size:0.75rem;">{{ g.name }}</span>
+                  {% endif %}
+                {% endfor %}
+              </td>
+              <td>
+                {% if c.unsubscribed %}
+                  <span class="badge badge-danger">Unsubscribed</span>
+                {% else %}
+                  <span class="badge badge-success">Active</span>
+                {% endif %}
+              </td>
+              <td>
+                <div style="display: flex; gap: 6px;">
+                  <button type="button" class="btn btn-secondary btn-sm" style="padding: 4px 8px;" onclick='openEditContactModal({{ c | tojson }})'>
+                    <i class="fa-solid fa-pen"></i> Edit
+                  </button>
+                  <form method="POST" action="{{ url_for('contacts.delete', contact_id=c._id) }}" style="display: inline;" onsubmit="return confirm('Delete this contact?');">
+                    <button type="submit" class="btn btn-danger btn-sm" style="padding: 4px 8px;">
+                      <i class="fa-solid fa-trash"></i>
+                    </button>
+                  </form>
+                </div>
+              </td>
+            </tr>
+            {% endfor %}
+          {% else %}
+            <tr>
+              <td colspan="8" style="text-align: center; color: var(--text-muted); padding: 32px;">
+                No contacts found. Add contacts manually or import a CSV/XLSX file.
+              </td>
+            </tr>
+          {% endif %}
+        </tbody>
+      </table>
+    </div>
+  </form>
+</div>
+
+<!-- Modal: Add Manual Contact -->
+<div class="modal-overlay" id="add-contact-modal">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h3 class="modal-title">Add New Contact</h3>
+      <button class="modal-close">&times;</button>
+    </div>
+    <form method="POST" action="{{ url_for('contacts.add') }}">
+      <div class="form-group">
+        <label class="form-label">Email Address *</label>
+        <input type="email" name="email" class="form-control" placeholder="john@company.com" required>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Full Name</label>
+        <input type="text" name="name" class="form-control" placeholder="John Smith">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Company Name</label>
+        <input type="text" name="company_name" class="form-control" placeholder="Acme Inc.">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Assign to Groups</label>
+        <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px;">
+          {% for g in groups %}
+            <label style="font-size: 0.85rem; display: flex; align-items: center; gap: 6px;">
+              <input type="checkbox" name="group_ids" value="{{ g._id }}"> {{ g.name }}
+            </label>
+          {% endfor %}
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Custom Fields (JSON key-value)</label>
+        <input type="text" name="custom_fields" class="form-control" placeholder='{"role": "CEO", "city": "San Francisco"}'>
+        <span style="font-size: 0.75rem; color: var(--text-muted);">Format: {"field_name": "value"}</span>
+      </div>
+      <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 24px;">
+        <button type="button" class="btn btn-secondary" data-modal-close>Cancel</button>
+        <button type="submit" class="btn btn-primary">Save Contact</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Modal: Edit Contact -->
+<div class="modal-overlay" id="edit-contact-modal">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h3 class="modal-title">Edit Contact Details</h3>
+      <button class="modal-close">&times;</button>
+    </div>
+    <form id="edit-contact-form" method="POST" action="">
+      <div class="form-group">
+        <label class="form-label">Email Address *</label>
+        <input type="email" name="email" id="edit-email" class="form-control" required>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Full Name</label>
+        <input type="text" name="name" id="edit-name" class="form-control">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Company Name</label>
+        <input type="text" name="company_name" id="edit-company" class="form-control">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Assign to Groups</label>
+        <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px;" id="edit-groups-container">
+          {% for g in groups %}
+            <label style="font-size: 0.85rem; display: flex; align-items: center; gap: 6px;">
+              <input type="checkbox" name="group_ids" value="{{ g._id }}" class="edit-group-checkbox"> {{ g.name }}
+            </label>
+          {% endfor %}
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Custom Fields (JSON key-value)</label>
+        <input type="text" name="custom_fields" id="edit-custom-fields" class="form-control">
+      </div>
+      <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 24px;">
+        <button type="button" class="btn btn-secondary" data-modal-close>Cancel</button>
+        <button type="submit" class="btn btn-primary">Update Contact</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Modal: Manage Groups (Integrated Group Management) -->
+<div class="modal-overlay" id="manage-groups-modal">
+  <div class="modal-content" style="max-width: 650px;">
+    <div class="modal-header">
+      <h3 class="modal-title"><i class="fa-solid fa-tags"></i> Manage Contact Groups</h3>
+      <button class="modal-close">&times;</button>
+    </div>
+
+    <!-- Create Group Form -->
+    <form method="POST" action="{{ url_for('contacts.add_group') }}" style="margin-bottom: 24px; padding-bottom: 20px; border-bottom: 1px solid var(--border-color);">
+      <h4 style="font-size: 0.95rem; font-weight: 700; margin-bottom: 12px;">Create New Group</h4>
+      <div style="display: flex; gap: 10px;">
+        <input type="text" name="name" class="form-control" placeholder="Group Name (e.g. Enterprise Leads)" required>
+        <input type="text" name="description" class="form-control" placeholder="Description...">
+        <button type="submit" class="btn btn-primary btn-sm" style="white-space: nowrap;"><i class="fa-solid fa-plus"></i> Create</button>
+      </div>
+    </form>
+
+    <!-- Existing Groups List -->
+    <h4 style="font-size: 0.95rem; font-weight: 700; margin-bottom: 12px;">Existing Groups</h4>
+    <div style="display: flex; flex-direction: column; gap: 10px; max-height: 250px; overflow-y: auto;">
+      {% if groups %}
+        {% for g in groups %}
+        <div style="display: flex; justify-content: space-between; align-items: center; padding: 10px 14px; border: 1px solid var(--border-color); border-radius: var(--radius-sm); background: #f8fafc;">
+          <div>
+            <strong style="font-size: 0.9rem;">{{ g.name }}</strong>
+            <span style="font-size: 0.8rem; color: var(--text-muted); margin-left: 8px;">({{ g.contact_count }} contacts)</span>
+          </div>
+          <form method="POST" action="{{ url_for('contacts.remove_group', group_id=g._id) }}" onsubmit="return confirm('Delete this group?');">
+            <button type="submit" class="btn btn-danger btn-sm" style="padding: 2px 6px; font-size: 0.75rem;"><i class="fa-solid fa-trash"></i> Delete</button>
+          </form>
+        </div>
+        {% endfor %}
+      {% else %}
+        <p style="color: var(--text-muted); font-size: 0.85rem;">No groups created yet.</p>
+      {% endif %}
+    </div>
+
+    <div style="display: flex; justify-content: flex-end; margin-top: 20px;">
+      <button type="button" class="btn btn-secondary" data-modal-close>Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Import CSV / XLSX -->
+<div class="modal-overlay" id="import-modal">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h3 class="modal-title">Import Contacts from CSV / XLSX</h3>
+      <button class="modal-close">&times;</button>
+    </div>
+    <form method="POST" action="{{ url_for('contacts.import_file') }}" enctype="multipart/form-data">
+      <div class="form-group">
+        <label class="form-label">Select File (.csv or .xlsx)</label>
+        <input type="file" name="file" class="form-control" accept=".csv,.xlsx,.xls" required>
+        <span style="font-size:0.75rem; color:var(--text-muted); display:block; margin-top:6px;">
+          File must contain an <strong>Email</strong> column. Optional columns: <strong>Name</strong>, <strong>Company Name</strong>, and custom attributes.
+        </span>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Assign Group to Imported Contacts</label>
+        <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px;">
+          {% for g in groups %}
+            <label style="font-size: 0.85rem; display: flex; align-items: center; gap: 6px;">
+              <input type="checkbox" name="group_ids" value="{{ g._id }}"> {{ g.name }}
+            </label>
+          {% endfor %}
+        </div>
+      </div>
+      <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 24px;">
+        <button type="button" class="btn btn-secondary" data-modal-close>Cancel</button>
+        <button type="submit" class="btn btn-primary"><i class="fa-solid fa-upload"></i> Start Import</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function toggleSelectAllContacts(masterCb) {
+  const checkboxes = document.querySelectorAll(".contact-checkbox");
+  checkboxes.forEach(cb => cb.checked = masterCb.checked);
+}
+
+function filterContactsTable() {
+  const query = document.getElementById("contact-search-input").value.toLowerCase();
+  const rows = document.querySelectorAll("#contacts-table tbody tr");
+  rows.forEach(row => {
+    const text = row.innerText.toLowerCase();
+    row.style.display = text.includes(query) ? "" : "none";
+  });
+}
+
+function openEditContactModal(contact) {
+  const form = document.getElementById("edit-contact-form");
+  form.action = "/contacts/" + contact._id + "/edit";
+  
+  document.getElementById("edit-email").value = contact.email || "";
+  document.getElementById("edit-name").value = contact.name || "";
+  document.getElementById("edit-company").value = contact.company_name || "";
+  document.getElementById("edit-custom-fields").value = JSON.stringify(contact.custom_fields || {});
+  
+  // Set group checkboxes
+  const assignedGroups = contact.group_ids || [];
+  document.querySelectorAll(".edit-group-checkbox").forEach(cb => {
+    cb.checked = assignedGroups.includes(cb.value);
+  });
+  
+  document.getElementById("edit-contact-modal").classList.add("active");
+}
+</script>
+{% endblock %}

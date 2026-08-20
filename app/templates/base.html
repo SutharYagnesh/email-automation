@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}Bulk Email Automation Dashboard{% endblock %}</title>
+  
+  <!-- Modern Google Font -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  
+  <!-- FontAwesome Icons CDN -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  
+  <!-- Custom CSS -->
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+  
+  <!-- Chart.js CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+  <div class="app-container">
+    {% if session.user_id %}
+    <!-- Sidebar Navigation -->
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-header">
+        <a href="{{ url_for('dashboard.index') }}" class="sidebar-brand">
+          <div class="sidebar-brand-icon"><i class="fa-solid fa-paper-plane"></i></div>
+          <span>MailAutomate</span>
+        </a>
+      </div>
+      
+      <nav class="sidebar-nav">
+        <a href="{{ url_for('dashboard.index') }}" class="nav-item {% if request.endpoint == 'dashboard.index' %}active{% endif %}">
+          <i class="fa-solid fa-chart-pie"></i>
+          <span>Dashboard</span>
+        </a>
+        <a href="{{ url_for('contacts.index') }}" class="nav-item {% if request.endpoint == 'contacts.index' %}active{% endif %}">
+          <i class="fa-solid fa-address-book"></i>
+          <span>Contacts Directory</span>
+        </a>
+        <a href="{{ url_for('senders.index') }}" class="nav-item {% if request.endpoint == 'senders.index' %}active{% endif %}">
+          <i class="fa-solid fa-server"></i>
+          <span>Sender Accounts</span>
+        </a>
+        <a href="{{ url_for('templates.index') }}" class="nav-item {% if request.endpoint == 'templates.index' %}active{% endif %}">
+          <i class="fa-solid fa-file-code"></i>
+          <span>Email Templates</span>
+        </a>
+        <a href="{{ url_for('campaigns.index') }}" class="nav-item {% if request.endpoint and 'campaigns' in request.endpoint %}active{% endif %}">
+          <i class="fa-solid fa-bullhorn"></i>
+          <span>Campaigns</span>
+        </a>
+        <a href="{{ url_for('settings.index') }}" class="nav-item {% if request.endpoint == 'settings.index' %}active{% endif %}">
+          <i class="fa-solid fa-gear"></i>
+          <span>Settings</span>
+        </a>
+      </nav>
+      
+      <div class="sidebar-footer">
+        <div class="user-profile-info">
+          <span class="user-profile-name">{{ session.full_name or session.username }}</span>
+          <span class="user-profile-email">{{ session.email }}</span>
+        </div>
+        <a href="{{ url_for('auth.logout') }}" style="color:var(--text-sidebar);" title="Logout">
+          <i class="fa-solid fa-right-from-bracket"></i>
+        </a>
+      </div>
+    </aside>
+    {% endif %}
+
+    <!-- Main Content Wrapper -->
+    <div class="main-wrapper" {% if not session.user_id %}style="margin-left:0;"{% endif %}>
+      {% if session.user_id %}
+      <header class="topbar">
+        <button class="topbar-mobile-toggle" id="mobile-sidebar-toggle">
+          <i class="fa-solid fa-bars"></i>
+        </button>
+        <h1 class="page-title">{% block page_title %}Dashboard{% endblock %}</h1>
+        <div class="topbar-actions">
+          <a href="{{ url_for('campaigns.create') }}" class="btn btn-primary btn-sm">
+            <i class="fa-solid fa-plus"></i> New Campaign
+          </a>
+        </div>
+      </header>
+      {% endif %}
+
+      <main class="content-body">
+        <!-- Flash Alert Messages -->
+        <div class="flash-messages">
+          {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+              {% for category, message in messages %}
+                <div class="alert alert-{{ category if category != 'error' else 'danger' }}">
+                  <span>{{ message }}</span>
+                  <button onclick="this.parentElement.remove()" style="background:none;border:none;cursor:pointer;font-size:1.2rem;">&times;</button>
+                </div>
+              {% endfor %}
+            {% endif %}
+          {% endwith %}
+        </div>
+
+        {% block content %}{% endblock %}
+      </main>
+    </div>
+  </div>
+
+  <!-- Shared JS Scripts -->
+  <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/senders.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/campaigns.js') }}"></script>
+  {% block scripts %}{% endblock %}
+</body>
+</html>

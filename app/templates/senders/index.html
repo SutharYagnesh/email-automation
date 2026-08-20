@@ -1,0 +1,145 @@
+{% extends "base.html" %}
+
+{% block title %}Sender Accounts - Bulk Email Automation{% endblock %}
+{% block page_title %}Gmail Sender Accounts{% endblock %}
+
+{% block content %}
+<div class="table-card">
+  <div class="table-header-bar">
+    <div>
+      <h3 style="font-size: 1.1rem; font-weight: 700;">Configured Gmail Senders</h3>
+      <span style="font-size: 0.8rem; color: var(--text-muted);">
+        All connections use SSL via <strong>smtp.gmail.com:465</strong> & IMAP <strong>imap.gmail.com:993</strong>
+      </span>
+    </div>
+    <button class="btn btn-primary btn-sm" data-modal-target="add-sender-modal">
+      <i class="fa-solid fa-plus"></i> Add Gmail Account
+    </button>
+  </div>
+
+  <div class="table-responsive">
+    <table class="custom-table">
+      <thead>
+        <tr>
+          <th>Gmail Username</th>
+          <th>Sender Name</th>
+          <th>Reply-To</th>
+          <th>App Password</th>
+          <th>Connection Status</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% if senders %}
+          {% for s in senders %}
+          <tr>
+            <td>
+              <strong style="color: var(--text-main);">{{ s.username }}</strong>
+              <div style="font-size: 0.75rem; color: var(--text-muted);">
+                Port: <strong>{{ s.smtp_port or 465 }}</strong> ({{ 'SSL' if (s.smtp_port or 465) == 465 else 'TLS/STARTTLS' }})
+              </div>
+            </td>
+            <td>{{ s.sender_name }}</td>
+            <td>{{ s.reply_to }}</td>
+            <td>
+              <code style="font-family: monospace; background: #f1f5f9; padding: 2px 6px; border-radius: 4px;">{{ s.app_password_masked }}</code>
+            </td>
+            <td>
+              <span class="badge badge-{{ 'success' if s.status == 'connected' else 'danger' if s.status == 'error' else 'warning' if s.status == 'warning' else 'secondary' }}" id="status-badge-{{ s._id }}">
+                {{ s.status }}
+              </span>
+              {% if s.status_message %}
+                <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 2px;">{{ s.status_message }}</div>
+              {% endif %}
+            </td>
+            <td>
+              <div style="display: flex; gap: 8px;">
+                <button class="btn btn-secondary btn-sm" id="test-btn-{{ s._id }}" onclick="testSenderConnection('{{ s._id }}')">
+                  <i class="fa-solid fa-plug"></i> Test Connection
+                </button>
+                <button class="btn btn-secondary btn-sm" onclick="runDeliverabilityCheck('{{ s.username.split('@')[-1] }}')">
+                  <i class="fa-solid fa-shield-halved"></i> Deliverability Check
+                </button>
+                <form method="POST" action="{{ url_for('senders.delete', sender_id=s._id) }}" style="display: inline;" onsubmit="return confirm('Remove sender account?');">
+                  <button type="submit" class="btn btn-danger btn-sm" style="padding: 4px 8px;">
+                    <i class="fa-solid fa-trash"></i>
+                  </button>
+                </form>
+              </div>
+            </td>
+          </tr>
+          {% endfor %}
+        {% else %}
+          <tr>
+            <td colspan="6" style="text-align: center; color: var(--text-muted); padding: 32px;">
+              No Gmail sender accounts configured yet. Add your Gmail username and 16-character App Password.
+            </td>
+          </tr>
+        {% endif %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Modal: Add Gmail Sender -->
+<div class="modal-overlay" id="add-sender-modal">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h3 class="modal-title">Add Gmail Sender Account</h3>
+      <button class="modal-close">&times;</button>
+    </div>
+    <form method="POST" action="{{ url_for('senders.add') }}">
+      <div class="form-group">
+        <label class="form-label">Gmail Username (Email) *</label>
+        <input type="email" name="username" class="form-control" placeholder="your-email@gmail.com" required>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Gmail App Password *</label>
+        <input type="password" name="app_password" class="form-control" placeholder="16-character Google App Password" required>
+        <span style="font-size: 0.75rem; color: var(--text-muted); margin-top: 4px; display: block;">
+          Generate via Google Account -> Security -> 2-Step Verification -> App Passwords. Passwords are stored with AES encryption.
+        </span>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Sender Name (From Name)</label>
+        <input type="text" name="sender_name" class="form-control" placeholder="John Doe Marketing">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Reply-To Email</label>
+        <input type="email" name="reply_to" class="form-control" placeholder="reply@company.com (defaults to username)">
+      </div>
+      <div class="form-group">
+        <label class="form-label">SMTP Port *</label>
+        <select name="smtp_port" class="form-control" required>
+          <option value="465" selected>465 (SSL - Default)</option>
+          <option value="587">587 (TLS / STARTTLS)</option>
+        </select>
+        <span style="font-size: 0.75rem; color: var(--text-muted); margin-top: 4px; display: block;">
+          Select Port 465 for SSL (recommended for Gmail) or Port 587 for TLS / STARTTLS.
+        </span>
+      </div>
+
+      <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 24px;">
+        <button type="button" class="btn btn-secondary" data-modal-close>Cancel</button>
+        <button type="submit" class="btn btn-primary">Save & Test Account</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Modal: Deliverability Checklist -->
+<div class="modal-overlay" id="deliverability-modal">
+  <div class="modal-content" style="max-width: 650px;">
+    <div class="modal-header">
+      <h3 class="modal-title"><i class="fa-solid fa-shield-halved" style="color:var(--primary);"></i> Domain Deliverability Checklist</h3>
+      <button class="modal-close">&times;</button>
+    </div>
+    <div id="deliverability-results">
+      <p>Clicking "Deliverability Check" analyzes SPF, DKIM, DMARC, and MX records.</p>
+    </div>
+    <div style="display: flex; justify-content: flex-end; margin-top: 24px;">
+      <button type="button" class="btn btn-secondary" data-modal-close>Close</button>
+    </div>
+  </div>
+</div>
+{% endblock %}

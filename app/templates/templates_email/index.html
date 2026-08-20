@@ -1,0 +1,202 @@
+{% extends "base.html" %}
+
+{% block title %}Email Templates - Bulk Email Automation{% endblock %}
+{% block page_title %}Email Templates{% endblock %}
+
+{% block content %}
+<div style="margin-bottom: 24px; display: flex; justify-content: space-between; align-items: center;">
+  <div>
+    <h2 style="font-size: 1.2rem; font-weight: 700;">Template Gallery</h2>
+    <p style="color: var(--text-muted); font-size: 0.85rem;">
+      Personalize emails with dynamic placeholders: <code>{{'{{name}}'}}</code>, <code>{{'{{email}}'}}</code>, <code>{{'{{company_name}}'}}</code>, and <code>{{'{{custom.role}}'}}</code>
+    </p>
+  </div>
+  <button class="btn btn-primary" data-modal-target="add-template-modal">
+    <i class="fa-solid fa-plus"></i> Create Template
+  </button>
+</div>
+
+<!-- Template Grid -->
+<div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 24px;">
+  {% if templates %}
+    {% for t in templates %}
+    <div class="card" style="display: flex; flex-direction: column; justify-content: space-between;">
+      <div>
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px;">
+          <h3 style="font-size: 1.05rem; font-weight: 700;">{{ t.name }}</h3>
+          {% if t.attachments %}
+            <span class="badge badge-info"><i class="fa-solid fa-paperclip"></i> {{ t.attachments|length }}</span>
+          {% endif %}
+        </div>
+        <div style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 12px;">
+          <strong>Subject:</strong> {{ t.subject }}
+        </div>
+        <div style="background: #f8fafc; padding: 12px; border-radius: var(--radius-sm); font-size: 0.8rem; height: 90px; overflow: hidden; border: 1px dashed var(--border-color); color: #475569;">
+          {{ t.body_html | striptags | truncate(150) }}
+        </div>
+      </div>
+
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 16px; pt: 12px; border-top: 1px solid var(--border-color);">
+        <div style="display: flex; gap: 6px;">
+          <button class="btn btn-secondary btn-sm" onclick='previewTemplate({{ t.subject | tojson }}, {{ t.body_html | tojson }})'>
+            <i class="fa-solid fa-eye"></i> Preview
+          </button>
+          <button class="btn btn-secondary btn-sm" onclick='checkSpamRisk({{ t.subject | tojson }}, {{ t.body_html | tojson }})'>
+            <i class="fa-solid fa-shield-cat"></i> Spam Check
+          </button>
+        </div>
+        <form method="POST" action="{{ url_for('templates.delete', template_id=t._id) }}" onsubmit="return confirm('Delete template?');">
+          <button type="submit" class="btn btn-danger btn-sm" style="padding: 4px 8px;">
+            <i class="fa-solid fa-trash"></i>
+          </button>
+        </form>
+      </div>
+    </div>
+    {% endfor %}
+  {% else %}
+    <div class="card" style="grid-column: 1 / -1; text-align: center; padding: 48px; color: var(--text-muted);">
+      <i class="fa-solid fa-file-code" style="font-size: 2.5rem; margin-bottom: 12px; color: var(--border-color);"></i>
+      <h3>No templates created yet</h3>
+      <p style="margin-top: 8px;">Create reusable email templates with custom dynamic variables and attachments.</p>
+    </div>
+  {% endif %}
+</div>
+
+<!-- Modal: Add Template -->
+<div class="modal-overlay" id="add-template-modal">
+  <div class="modal-content" style="max-width: 700px;">
+    <div class="modal-header">
+      <h3 class="modal-title">Create Email Template</h3>
+      <button class="modal-close">&times;</button>
+    </div>
+    <form method="POST" action="{{ url_for('templates.add') }}" enctype="multipart/form-data">
+      <div class="form-group">
+        <label class="form-label">Template Name *</label>
+        <input type="text" name="name" class="form-control" placeholder="Product Launch Announcement" required>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Email Subject Line *</label>
+        <input type="text" name="subject" class="form-control" placeholder="Special update for {{'{{name}}'}} at {{'{{company_name}}'}}" required>
+      </div>
+      
+      <div class="form-group">
+        <label class="form-label">HTML Email Body *</label>
+        <textarea name="body_html" class="form-control" style="min-height: 180px; font-family: monospace;" placeholder="<h2>Hi {{'{{name}}'}},</h2><p>Welcome to our platform...</p>" required></textarea>
+        <span style="font-size: 0.75rem; color: var(--text-muted); display: block; margin-top: 4px;">
+          Available Variables: <code>{{'{{name}}'}}</code>, <code>{{'{{email}}'}}</code>, <code>{{'{{company_name}}'}}</code>, <code>{{'{{custom.variable_name}}'}}</code>
+        </span>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Plain Text Fallback (Optional)</label>
+        <textarea name="body_text" class="form-control" placeholder="Hi {{'{{name}}'}}, Welcome to our platform..."></textarea>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">File Attachments</label>
+        <input type="file" name="attachment_files" class="form-control" multiple>
+      </div>
+
+      <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 24px;">
+        <button type="button" class="btn btn-secondary" data-modal-close>Cancel</button>
+        <button type="submit" class="btn btn-primary">Save Template</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Modal: Live Preview -->
+<div class="modal-overlay" id="preview-modal">
+  <div class="modal-content" style="max-width: 750px;">
+    <div class="modal-header">
+      <h3 class="modal-title"><i class="fa-solid fa-eye"></i> Email Live Preview</h3>
+      <button class="modal-close">&times;</button>
+    </div>
+    <div style="margin-bottom: 12px; padding: 12px; background: #f1f5f9; border-radius: var(--radius-sm);">
+      <div><strong>Subject:</strong> <span id="preview-subject-text"></span></div>
+      <div style="font-size: 0.8rem; color: var(--text-muted); margin-top: 4px;">Rendered with sample recipient: Jane Doe (Acme Corp)</div>
+    </div>
+    <div id="preview-html-frame" style="border: 1px solid var(--border-color); padding: 20px; border-radius: var(--radius-sm); min-height: 250px; background: #fff;"></div>
+    <div style="display: flex; justify-content: flex-end; margin-top: 20px;">
+      <button type="button" class="btn btn-secondary" data-modal-close>Close Preview</button>
+    </div>
+  </div>
+</div>
+<!-- Modal: Spam Risk Audit -->
+<div class="modal-overlay" id="spam-check-modal">
+  <div class="modal-content" style="max-width: 650px;">
+    <div class="modal-header">
+      <h3 class="modal-title"><i class="fa-solid fa-shield-cat" style="color:var(--primary);"></i> Deliverability & Spam Risk Audit</h3>
+      <button class="modal-close">&times;</button>
+    </div>
+    <div id="spam-check-results">
+      <p>Analyzing email subject and HTML content...</p>
+    </div>
+    <div style="display: flex; justify-content: flex-end; margin-top: 20px;">
+      <button type="button" class="btn btn-secondary" data-modal-close>Close</button>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function previewTemplate(subject, bodyHtml) {
+  fetch("/templates/preview", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ subject: subject, body_html: bodyHtml })
+  })
+    .then(res => res.json())
+    .then(data => {
+      if (data.success) {
+        document.getElementById("preview-subject-text").innerText = data.rendered_subject;
+        document.getElementById("preview-html-frame").innerHTML = data.rendered_html;
+        document.getElementById("preview-modal").classList.add("active");
+      }
+    });
+}
+
+function checkSpamRisk(subject, bodyHtml) {
+  const modal = document.getElementById("spam-check-modal");
+  const container = document.getElementById("spam-check-results");
+  modal.classList.add("active");
+  container.innerHTML = "<p>Analyzing email content for spam trigger words and formatting...</p>";
+
+  fetch("/templates/spam-check", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ subject: subject, body_html: bodyHtml })
+  })
+    .then(res => res.json())
+    .then(data => {
+      if (data.success) {
+        const r = data.result;
+        const badgeClass = r.risk_level === 'Low' ? 'success' : r.risk_level === 'Medium' ? 'warning' : 'danger';
+        
+        let warningsHtml = "";
+        r.warnings.forEach(w => {
+          warningsHtml += `<li style="margin-bottom:6px;">${w}</li>`;
+        });
+
+        container.innerHTML = `
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; padding:12px; background:#f8fafc; border-radius:8px;">
+            <div>
+              <div style="font-size:0.85rem; color:#64748b;">Spam Risk Level</div>
+              <strong style="font-size:1.2rem;">${r.risk_level} Risk</strong>
+            </div>
+            <div>
+              <span class="badge badge-${badgeClass}" style="font-size:1rem; padding:6px 14px;">Score: ${r.spam_score}/100</span>
+            </div>
+          </div>
+
+          <h4 style="font-size:0.95rem; font-weight:700; margin-bottom:8px;">Audit Recommendations & Findings:</h4>
+          <ul style="font-size:0.88rem; color:#334155; padding-left:20px;">
+            ${warningsHtml}
+          </ul>
+        `;
+      }
+    });
+}
+</script>
+{% endblock %}

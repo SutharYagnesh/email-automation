@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+
+{% block title %}Settings - Bulk Email Automation{% endblock %}
+{% block page_title %}Application & Deliverability Settings{% endblock %}
+
+{% block content %}
+<div style="max-width: 800px; margin: 0 auto; display: flex; flex-direction: column; gap: 24px;">
+  <!-- Reply Monitoring Manual Sync Card -->
+  <div class="card">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+      <div>
+        <h3 style="font-size: 1.1rem; font-weight: 700;">IMAP Reply Monitor</h3>
+        <p style="font-size: 0.85rem; color: var(--text-muted);">
+          Background monitor checks active Gmail sender mailboxes every 2 minutes. You can also trigger a manual scan here.
+        </p>
+      </div>
+      <form method="POST" action="{{ url_for('settings.manual_check_replies') }}">
+        <button type="submit" class="btn btn-primary">
+          <i class="fa-solid fa-rotate"></i> Sync Replies Now
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Deliverability Headers Info Card -->
+  <div class="card">
+    <h3 style="font-size: 1.1rem; font-weight: 700; margin-bottom: 16px;">Email Header & Deliverability Settings</h3>
+    <div style="display: flex; flex-direction: column; gap: 12px; font-size: 0.9rem;">
+      <div style="padding: 12px; background: #f8fafc; border-radius: var(--radius-sm); border: 1px solid var(--border-color);">
+        <strong>Message-ID:</strong> Auto-generated RFC 2822 compliant <code>&lt;uuid@domain&gt;</code> for every single outgoing email.
+      </div>
+      <div style="padding: 12px; background: #f8fafc; border-radius: var(--radius-sm); border: 1px solid var(--border-color);">
+        <strong>Reply-To:</strong> Set dynamically to configured sender address or reply-to alias.
+      </div>
+      <div style="padding: 12px; background: #f8fafc; border-radius: var(--radius-sm); border: 1px solid var(--border-color);">
+        <strong>List-Unsubscribe:</strong> Standard headers <code>List-Unsubscribe</code> and <code>List-Unsubscribe-Post: List-Unsubscribe=One-Click</code> injected.
+      </div>
+      <div style="padding: 12px; background: #f8fafc; border-radius: var(--radius-sm); border: 1px solid var(--border-color);">
+        <strong>Precedence:</strong> Set to <code>bulk</code> to respect automated mailing conventions.
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

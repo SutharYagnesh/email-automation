@@ -1,0 +1,194 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - Bulk Email Automation{% endblock %}
+{% block page_title %}Dashboard Overview{% endblock %}
+
+{% block content %}
+<!-- Top KPI Stats Grid -->
+<div class="stats-grid">
+  <div class="card stat-card">
+    <div class="stat-header">
+      <span class="stat-title">Total Contacts</span>
+      <div class="stat-icon primary"><i class="fa-solid fa-users"></i></div>
+    </div>
+    <div class="stat-value">{{ stats.total_contacts }}</div>
+    <div class="stat-subtext">Across {{ stats.total_groups }} Groups</div>
+  </div>
+
+  <div class="card stat-card">
+    <div class="stat-header">
+      <span class="stat-title">Campaigns</span>
+      <div class="stat-icon info"><i class="fa-solid fa-paper-plane"></i></div>
+    </div>
+    <div class="stat-value">{{ stats.total_campaigns }}</div>
+    <div class="stat-subtext">Executed & Drafts</div>
+  </div>
+
+  <div class="card stat-card">
+    <div class="stat-header">
+      <span class="stat-title">Total Emails Sent</span>
+      <div class="stat-icon success"><i class="fa-solid fa-envelope-circle-check"></i></div>
+    </div>
+    <div class="stat-value">{{ stats.total_emails_sent }}</div>
+    <div class="stat-subtext">{{ stats.delivered_count }} Delivered</div>
+  </div>
+
+  <div class="card stat-card">
+    <div class="stat-header">
+      <span class="stat-title">Open Rate</span>
+      <div class="stat-icon warning"><i class="fa-solid fa-envelope-open-text"></i></div>
+    </div>
+    <div class="stat-value">{{ stats.open_rate }}%</div>
+    <div class="stat-subtext">{{ stats.opened_count }} Emails Opened</div>
+  </div>
+
+  <div class="card stat-card">
+    <div class="stat-header">
+      <span class="stat-title">Reply Rate</span>
+      <div class="stat-icon success"><i class="fa-solid fa-reply-all"></i></div>
+    </div>
+    <div class="stat-value">{{ stats.reply_rate }}%</div>
+    <div class="stat-subtext">{{ stats.replied_count }} Direct Replies</div>
+  </div>
+
+  <div class="card stat-card">
+    <div class="stat-header">
+      <span class="stat-title">Failed / Bounced</span>
+      <div class="stat-icon danger"><i class="fa-solid fa-triangle-exclamation"></i></div>
+    </div>
+    <div class="stat-value">{{ stats.failed_count }}</div>
+    <div class="stat-subtext">Delivery Failures</div>
+  </div>
+</div>
+
+<!-- Main Row: Chart & Metrics Breakdown -->
+<div style="display: grid; grid-template-columns: 2fr 1fr; gap: 24px; margin-bottom: 32px;">
+  <!-- Chart Card -->
+  <div class="card">
+    <h3 style="font-size: 1.1rem; font-weight: 700; margin-bottom: 16px;">Delivery & Tracking Breakdown</h3>
+    <div style="height: 280px; position: relative;">
+      <canvas id="deliveryChart"></canvas>
+    </div>
+  </div>
+
+  <!-- Detailed Metric Counts Breakdown Card -->
+  <div class="card">
+    <h3 style="font-size: 1.1rem; font-weight: 700; margin-bottom: 16px;">Status Summary</h3>
+    <div style="display: flex; flex-direction: column; gap: 14px;">
+      <div style="display: flex; justify-content: space-between; align-items: center; padding-bottom: 8px; border-bottom: 1px solid var(--border-color);">
+        <span><i class="fa-solid fa-paper-plane" style="color:var(--primary); margin-right:8px;"></i> Sent</span>
+        <strong>{{ stats.sent_count }}</strong>
+      </div>
+      <div style="display: flex; justify-content: space-between; align-items: center; padding-bottom: 8px; border-bottom: 1px solid var(--border-color);">
+        <span><i class="fa-solid fa-check-double" style="color:var(--info); margin-right:8px;"></i> Delivered</span>
+        <strong>{{ stats.delivered_count }}</strong>
+      </div>
+      <div style="display: flex; justify-content: space-between; align-items: center; padding-bottom: 8px; border-bottom: 1px solid var(--border-color);">
+        <span><i class="fa-solid fa-envelope-open" style="color:var(--warning); margin-right:8px;"></i> Opened / Read</span>
+        <strong>{{ stats.opened_count }}</strong>
+      </div>
+      <div style="display: flex; justify-content: space-between; align-items: center; padding-bottom: 8px; border-bottom: 1px solid var(--border-color);">
+        <span><i class="fa-solid fa-envelope" style="color:var(--secondary); margin-right:8px;"></i> Not Opened</span>
+        <strong>{{ stats.not_opened_count }}</strong>
+      </div>
+      <div style="display: flex; justify-content: space-between; align-items: center; padding-bottom: 8px; border-bottom: 1px solid var(--border-color);">
+        <span><i class="fa-solid fa-reply" style="color:var(--success); margin-right:8px;"></i> Replied</span>
+        <strong>{{ stats.replied_count }}</strong>
+      </div>
+      <div style="display: flex; justify-content: space-between; align-items: center;">
+        <span><i class="fa-solid fa-xmark" style="color:var(--danger); margin-right:8px;"></i> Failed / Bounced</span>
+        <strong>{{ stats.failed_count }}</strong>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Recent Campaigns Table -->
+<div class="table-card">
+  <div class="table-header-bar">
+    <h3 style="font-size: 1.1rem; font-weight: 700;">Recent Campaigns</h3>
+    <a href="{{ url_for('campaigns.index') }}" class="btn btn-secondary btn-sm">View All Campaigns</a>
+  </div>
+  <div class="table-responsive">
+    <table class="custom-table">
+      <thead>
+        <tr>
+          <th>Campaign Name</th>
+          <th>Status</th>
+          <th>Recipients</th>
+          <th>Sent</th>
+          <th>Opened</th>
+          <th>Replied</th>
+          <th>Created</th>
+          <th>Action</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% if recent_campaigns %}
+          {% for c in recent_campaigns %}
+          <tr>
+            <td>
+              <a href="{{ url_for('campaigns.detail', campaign_id=c._id) }}" style="font-weight: 600; color: var(--primary); text-decoration: none;">
+                {{ c.name }}
+              </a>
+            </td>
+            <td>
+              <span class="badge badge-{{ 'success' if c.status == 'completed' else 'primary' if c.status == 'sending' else 'danger' if c.status == 'failed' else 'secondary' }}">
+                {{ c.status }}
+              </span>
+            </td>
+            <td>{{ c.total_recipients }}</td>
+            <td>{{ c.sent_count }}</td>
+            <td>{{ c.opened_count }}</td>
+            <td>{{ c.replied_count }}</td>
+            <td>{{ c.created_at.strftime('%b %d, %Y %H:%M') if c.created_at }}</td>
+            <td>
+              <a href="{{ url_for('campaigns.detail', campaign_id=c._id) }}" class="btn btn-secondary btn-sm">
+                Analytics
+              </a>
+            </td>
+          </tr>
+          {% endfor %}
+        {% else %}
+          <tr>
+            <td colspan="8" style="text-align: center; color: var(--text-muted); padding: 32px;">
+              No campaigns created yet. <a href="{{ url_for('campaigns.create') }}">Create your first email campaign</a>.
+            </td>
+          </tr>
+        {% endif %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+  fetch("/api/dashboard/stats")
+    .then(res => res.json())
+    .then(data => {
+      const ctx = document.getElementById("deliveryChart").getContext("2d");
+      new Chart(ctx, {
+        type: "doughnut",
+        data: {
+          labels: data.labels,
+          datasets: [{
+            data: data.series,
+            backgroundColor: ["#94a3b8", "#f59e0b", "#10b981", "#ef4444"],
+            borderWidth: 2,
+            borderColor: "#ffffff"
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { position: "right" }
+          }
+        }
+      });
+    });
+});
+</script>
+{% endblock %}

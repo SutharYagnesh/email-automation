@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+
+{% block title %}Email Campaigns - Bulk Email Automation{% endblock %}
+{% block page_title %}Email Campaigns{% endblock %}
+
+{% block content %}
+<div class="table-card">
+  <div class="table-header-bar">
+    <h3 style="font-size: 1.1rem; font-weight: 700;">Campaign History</h3>
+    <a href="{{ url_for('campaigns.create') }}" class="btn btn-primary btn-sm">
+      <i class="fa-solid fa-plus"></i> Create New Campaign
+    </a>
+  </div>
+
+  <div class="table-responsive">
+    <table class="custom-table">
+      <thead>
+        <tr>
+          <th>Campaign Name</th>
+          <th>Status</th>
+          <th>Total Recipients</th>
+          <th>Sent</th>
+          <th>Delivered</th>
+          <th>Opened</th>
+          <th>Replied</th>
+          <th>Failed</th>
+          <th>Created Date</th>
+          <th>Action</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% if campaigns %}
+          {% for c in campaigns %}
+          <tr>
+            <td>
+              <a href="{{ url_for('campaigns.detail', campaign_id=c._id) }}" style="font-weight: 600; color: var(--primary); text-decoration: none;">
+                {{ c.name }}
+              </a>
+            </td>
+            <td>
+              <span class="badge badge-{{ 'success' if c.status == 'completed' else 'primary' if c.status == 'sending' else 'danger' if c.status == 'failed' else 'secondary' }}">
+                {{ c.status }}
+              </span>
+            </td>
+            <td><strong>{{ c.total_recipients }}</strong></td>
+            <td>{{ c.sent_count }}</td>
+            <td>{{ c.delivered_count }}</td>
+            <td><span style="color: var(--warning); font-weight: 600;">{{ c.opened_count }}</span></td>
+            <td><span style="color: var(--success); font-weight: 600;">{{ c.replied_count }}</span></td>
+            <td><span style="color: var(--danger); font-weight: 600;">{{ c.failed_count }}</span></td>
+            <td>{{ c.created_at.strftime('%b %d, %Y %H:%M') if c.created_at }}</td>
+            <td>
+              <div style="display: flex; gap: 6px;">
+                <a href="{{ url_for('campaigns.detail', campaign_id=c._id) }}" class="btn btn-secondary btn-sm">
+                  Analytics <i class="fa-solid fa-arrow-right"></i>
+                </a>
+                <form method="POST" action="{{ url_for('campaigns.delete', campaign_id=c._id) }}" style="display: inline;" onsubmit="return confirm('Delete this campaign and all its logs?');">
+                  <button type="submit" class="btn btn-danger btn-sm" style="padding: 4px 8px;">
+                    <i class="fa-solid fa-trash"></i>
+                  </button>
+                </form>
+              </div>
+            </td>
+          </tr>
+          {% endfor %}
+        {% else %}
+          <tr>
+            <td colspan="10" style="text-align: center; color: var(--text-muted); padding: 32px;">
+              No email campaigns launched yet. Click "Create New Campaign" to get started.
+            </td>
+          </tr>
+        {% endif %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

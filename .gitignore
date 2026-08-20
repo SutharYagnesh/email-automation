@@ -1,0 +1,24 @@
+# Environment variables (Sensitive secrets)
+.env
+
+# Python cache & compiled files
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# Virtual Environment
+venv/
+env/
+ENV/
+.venv
+
+# Uploaded media & static files
+app/static/uploads/*
+!app/static/uploads/.gitkeep
+
+# IDE files
+.vscode/
+.idea/
+*.swp
