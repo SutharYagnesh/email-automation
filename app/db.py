@@ -11,7 +11,7 @@ def get_db():
         try:
             _client = MongoClient(
                 Config.MONGODB_URI,
-                serverSelectionTimeoutMS=5000,
+                serverSelectionTimeoutMS=200000,
                 tlsAllowInvalidCertificates=True
             )
         except Exception:
