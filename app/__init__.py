@@ -8,8 +8,11 @@ def create_app():
     app = Flask(__name__)
     app.config.from_object(Config)
     
-    # Create upload directory
-    os.makedirs(app.config["UPLOAD_FOLDER"], exist_ok=True)
+    # Create upload directory (safely handle read-only filesystems on serverless)
+    try:
+        os.makedirs(app.config["UPLOAD_FOLDER"], exist_ok=True)
+    except Exception as e:
+        print(f"[App Init Warning] Could not create upload directory: {e}")
     
     # Initialize MongoDB connection & indexes
     init_db(app)
@@ -35,10 +38,11 @@ def create_app():
     app.register_blueprint(tracking_bp)
     app.register_blueprint(settings_bp)
     
-    # Start background IMAP reply monitor
-    try:
-        start_background_reply_monitor(interval_seconds=120)
-    except Exception as e:
-        print(f"[App Init Warning] Could not start reply monitor: {e}")
+    # Start background IMAP reply monitor if not on serverless Vercel
+    if not os.getenv("VERCEL") and not os.getenv("AWS_LAMBDA_FUNCTION_NAME"):
+        try:
+            start_background_reply_monitor(interval_seconds=120)
+        except Exception as e:
+            print(f"[App Init Warning] Could not start reply monitor: {e}")
         
     return app

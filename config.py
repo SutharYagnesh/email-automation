@@ -13,8 +13,11 @@ class Config:
     # App URL for tracking pixel & unsubscribe link generation
     APP_BASE_URL = os.getenv("APP_BASE_URL", "http://localhost:5000")
     
-    # File upload configurations
-    UPLOAD_FOLDER = os.path.join(os.path.dirname(os.path.abspath(__file__)), "app", "static", "uploads")
+    # File upload configurations (Use /tmp on Vercel / serverless)
+    if os.getenv("VERCEL") or os.getenv("AWS_LAMBDA_FUNCTION_NAME"):
+        UPLOAD_FOLDER = "/tmp"
+    else:
+        UPLOAD_FOLDER = os.path.join(os.path.dirname(os.path.abspath(__file__)), "app", "static", "uploads")
     MAX_CONTENT_LENGTH = 16 * 1024 * 1024  # 16 MB max upload limit
     ALLOWED_EXTENSIONS = {"csv", "xlsx", "xls", "pdf", "doc", "docx", "png", "jpg", "jpeg", "txt"}
     

@@ -8,11 +8,18 @@ class Database:
 
 def init_db(app=None):
     """Initialize PyMongo client and create database indexes."""
+    if Database.db is not None:
+        return Database.db
+        
     uri = Config.MONGODB_URI
     db_name = Config.MONGODB_DB_NAME
     
-    Database.client = MongoClient(uri, serverSelectionTimeoutMS=5000)
-    Database.db = Database.client[db_name]
+    try:
+        Database.client = MongoClient(uri, serverSelectionTimeoutMS=5000, connectTimeoutMS=5000)
+        Database.db = Database.client[db_name]
+    except Exception as e:
+        print(f"[Database Error] Connection failed: {e}")
+        return None
     
     # Create indexes for optimal performance and constraint enforcement
     try:
