@@ -1,27 +1,16 @@
 import os
 from flask import Flask
 from config import Config
-from app.db import init_db
-from app.services.reply_monitor_service import start_background_reply_monitor
 
 def create_app():
+    """Simple Flask application factory."""
     app = Flask(__name__)
     app.config.from_object(Config)
-    
-    # Create upload directory (safely handle read-only filesystems on serverless)
-    try:
-        os.makedirs(app.config["UPLOAD_FOLDER"], exist_ok=True)
-    except Exception as e:
-        print(f"[App Init Warning] Could not create upload directory: {e}")
-    
-    # Initialize MongoDB connection & indexes
-    init_db(app)
     
     # Register blueprints
     from app.routes.auth import auth_bp
     from app.routes.dashboard import dashboard_bp
     from app.routes.contacts import contacts_bp
-    from app.routes.groups import groups_bp
     from app.routes.senders import senders_bp
     from app.routes.templates import templates_bp
     from app.routes.campaigns import campaigns_bp
@@ -31,34 +20,19 @@ def create_app():
     app.register_blueprint(auth_bp)
     app.register_blueprint(dashboard_bp)
     app.register_blueprint(contacts_bp)
-    app.register_blueprint(groups_bp)
     app.register_blueprint(senders_bp)
     app.register_blueprint(templates_bp)
     app.register_blueprint(campaigns_bp)
     app.register_blueprint(tracking_bp)
     app.register_blueprint(settings_bp)
     
-    # Register custom Jinja filter for safe date formatting
+    # Safe date formatting filter for templates
     @app.template_filter('datetime_format')
     def datetime_format(val, fmt='%b %d, %Y %H:%M'):
         if not val:
             return '-'
         if hasattr(val, 'strftime'):
             return val.strftime(fmt)
-        try:
-            from datetime import datetime
-            if isinstance(val, str):
-                dt = datetime.fromisoformat(val.replace('Z', '+00:00'))
-                return dt.strftime(fmt)
-        except Exception:
-            pass
         return str(val)
-    
-    # Start background IMAP reply monitor if not on serverless Vercel
-    if not os.getenv("VERCEL") and not os.getenv("AWS_LAMBDA_FUNCTION_NAME"):
-        try:
-            start_background_reply_monitor(interval_seconds=120)
-        except Exception as e:
-            print(f"[App Init Warning] Could not start reply monitor: {e}")
         
     return app
