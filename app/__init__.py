@@ -2,10 +2,29 @@ import os
 from flask import Flask
 from config import Config
 
+def datetime_format(val, fmt='%b %d, %Y %H:%M'):
+    """Safe date formatting Jinja filter."""
+    if not val:
+        return '-'
+    if hasattr(val, 'strftime'):
+        return val.strftime(fmt)
+    try:
+        from datetime import datetime
+        if isinstance(val, str):
+            dt = datetime.fromisoformat(val.replace('Z', '+00:00'))
+            return dt.strftime(fmt)
+    except Exception:
+        pass
+    return str(val)
+
 def create_app():
     """Simple Flask application factory."""
     app = Flask(__name__)
     app.config.from_object(Config)
+    
+    # Register Jinja custom filters directly
+    app.jinja_env.filters['datetime_format'] = datetime_format
+    app.template_filter('datetime_format')(datetime_format)
     
     # Register blueprints
     from app.routes.auth import auth_bp
@@ -26,13 +45,4 @@ def create_app():
     app.register_blueprint(tracking_bp)
     app.register_blueprint(settings_bp)
     
-    # Safe date formatting filter for templates
-    @app.template_filter('datetime_format')
-    def datetime_format(val, fmt='%b %d, %Y %H:%M'):
-        if not val:
-            return '-'
-        if hasattr(val, 'strftime'):
-            return val.strftime(fmt)
-        return str(val)
-        
     return app
