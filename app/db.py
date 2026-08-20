@@ -15,11 +15,13 @@ def init_db(app=None):
     db_name = Config.MONGODB_DB_NAME
     
     try:
-        Database.client = MongoClient(uri, serverSelectionTimeoutMS=5000, connectTimeoutMS=5000)
+        Database.client = MongoClient(uri, serverSelectionTimeoutMS=10000, connectTimeoutMS=10000)
         Database.db = Database.client[db_name]
     except Exception as e:
         print(f"[Database Error] Connection failed: {e}")
-        return None
+        # Try fallback MongoClient without extra params if initial attempt fails
+        Database.client = MongoClient(uri)
+        Database.db = Database.client[db_name]
     
     # Create indexes for optimal performance and constraint enforcement
     try:
@@ -65,5 +67,14 @@ def init_db(app=None):
 def get_db():
     """Get MongoDB database instance."""
     if Database.db is None:
-        init_db()
+        res = init_db()
+        if res is None and Database.db is None:
+            # Fallback direct connection attempt
+            try:
+                uri = Config.MONGODB_URI
+                db_name = Config.MONGODB_DB_NAME
+                Database.client = MongoClient(uri, serverSelectionTimeoutMS=10000, connectTimeoutMS=10000)
+                Database.db = Database.client[db_name]
+            except Exception as e:
+                raise RuntimeError(f"Failed to connect to MongoDB: {e}")
     return Database.db
