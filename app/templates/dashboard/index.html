@@ -141,7 +141,7 @@
             <td>{{ c.sent_count }}</td>
             <td>{{ c.opened_count }}</td>
             <td>{{ c.replied_count }}</td>
-            <td>{{ c.created_at.strftime('%b %d, %Y %H:%M') if c.created_at }}</td>
+            <td>{{ c.created_at | datetime_format }}</td>
             <td>
               <a href="{{ url_for('campaigns.detail', campaign_id=c._id) }}" class="btn btn-secondary btn-sm">
                 Analytics

@@ -136,14 +136,14 @@
               {% endif %}
             </td>
             <td>{{ log.subject }}</td>
-            <td>{{ log.sent_at.strftime('%b %d, %H:%M:%S') if log.sent_at else '-' }}</td>
+            <td>{{ log.sent_at | datetime_format('%b %d, %H:%M:%S') }}</td>
             <td>
               <span class="badge badge-{{ 'success' if log.status == 'replied' else 'warning' if log.status == 'opened' else 'info' if log.status == 'delivered' else 'danger' if log.status == 'failed' else 'secondary' }}">
                 {{ log.status }}
               </span>
             </td>
-            <td>{{ log.opened_at.strftime('%b %d, %H:%M:%S') if log.opened_at else '-' }}</td>
-            <td>{{ log.replied_at.strftime('%b %d, %H:%M:%S') if log.replied_at else '-' }}</td>
+            <td>{{ log.opened_at | datetime_format('%b %d, %H:%M:%S') }}</td>
+            <td>{{ log.replied_at | datetime_format('%b %d, %H:%M:%S') }}</td>
             <td>
               {% if log.error_message %}
                 <span style="font-size: 0.75rem; color: var(--danger);">{{ log.error_message }}</span>

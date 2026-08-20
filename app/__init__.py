@@ -38,6 +38,22 @@ def create_app():
     app.register_blueprint(tracking_bp)
     app.register_blueprint(settings_bp)
     
+    # Register custom Jinja filter for safe date formatting
+    @app.template_filter('datetime_format')
+    def datetime_format(val, fmt='%b %d, %Y %H:%M'):
+        if not val:
+            return '-'
+        if hasattr(val, 'strftime'):
+            return val.strftime(fmt)
+        try:
+            from datetime import datetime
+            if isinstance(val, str):
+                dt = datetime.fromisoformat(val.replace('Z', '+00:00'))
+                return dt.strftime(fmt)
+        except Exception:
+            pass
+        return str(val)
+    
     # Start background IMAP reply monitor if not on serverless Vercel
     if not os.getenv("VERCEL") and not os.getenv("AWS_LAMBDA_FUNCTION_NAME"):
         try:

@@ -23,13 +23,16 @@ def login():
         identifier = request.form.get("username", "")
         password = request.form.get("password", "")
         
-        success, message, user = login_user(identifier, password)
-        if success:
-            flash("Welcome back!", "success")
-            next_url = request.args.get("next") or url_for("dashboard.index")
-            return redirect(next_url)
-        else:
-            flash(message, "danger")
+        try:
+            success, message, user = login_user(identifier, password)
+            if success:
+                flash("Welcome back!", "success")
+                next_url = request.args.get("next") or url_for("dashboard.index")
+                return redirect(next_url)
+            else:
+                flash(message, "danger")
+        except Exception as e:
+            flash(f"Login error: {str(e)}", "danger")
             
     return render_template("auth/login.html")
 
@@ -44,13 +47,16 @@ def register():
         password = request.form.get("password", "")
         full_name = request.form.get("full_name", "")
         
-        success, message, user = register_user(username, email, password, full_name)
-        if success:
-            login_user(username, password)
-            flash("Account created successfully!", "success")
-            return redirect(url_for("dashboard.index"))
-        else:
-            flash(message, "danger")
+        try:
+            success, message, user = register_user(username, email, password, full_name)
+            if success:
+                login_user(username, password)
+                flash("Account created successfully!", "success")
+                return redirect(url_for("dashboard.index"))
+            else:
+                flash(message, "danger")
+        except Exception as e:
+            flash(f"Registration error: {str(e)}", "danger")
             
     return render_template("auth/register.html")
 
