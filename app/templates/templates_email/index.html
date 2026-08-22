@@ -37,9 +37,12 @@
       </div>
 
       <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 16px; pt: 12px; border-top: 1px solid var(--border-color);">
-        <div style="display: flex; gap: 6px;">
+        <div style="display: flex; gap: 6px; flex-wrap: wrap;">
           <button class="btn btn-secondary btn-sm" onclick='previewTemplate({{ t.subject | tojson }}, {{ t.body_html | tojson }})'>
             <i class="fa-solid fa-eye"></i> Preview
+          </button>
+          <button class="btn btn-secondary btn-sm" onclick='openEditTemplateModal({{ t._id | tojson }}, {{ t.name | tojson }}, {{ t.subject | tojson }}, {{ t.body_html | tojson }}, {{ (t.body_text or "") | tojson }})'>
+            <i class="fa-solid fa-pen-to-square"></i> Edit
           </button>
           <button class="btn btn-secondary btn-sm" onclick='checkSpamRisk({{ t.subject | tojson }}, {{ t.body_html | tojson }})'>
             <i class="fa-solid fa-shield-cat"></i> Spam Check
@@ -137,10 +140,62 @@
     </div>
   </div>
 </div>
+
+<!-- Modal: Edit Template -->
+<div class="modal-overlay" id="edit-template-modal">
+  <div class="modal-content" style="max-width: 700px;">
+    <div class="modal-header">
+      <h3 class="modal-title"><i class="fa-solid fa-pen-to-square" style="color:var(--primary);"></i> Edit Email Template</h3>
+      <button class="modal-close">&times;</button>
+    </div>
+    <form id="edit-template-form" method="POST" action="" enctype="multipart/form-data">
+      <div class="form-group">
+        <label class="form-label">Template Name *</label>
+        <input type="text" id="edit-template-name" name="name" class="form-control" required>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Email Subject Line *</label>
+        <input type="text" id="edit-template-subject" name="subject" class="form-control" required>
+      </div>
+      
+      <div class="form-group">
+        <label class="form-label">HTML Email Body *</label>
+        <textarea id="edit-template-html" name="body_html" class="form-control" style="min-height: 180px; font-family: monospace;" required></textarea>
+        <span style="font-size: 0.75rem; color: var(--text-muted); display: block; margin-top: 4px;">
+          Available Variables: <code>{{'{{name}}'}}</code>, <code>{{'{{email}}'}}</code>, <code>{{'{{company_name}}'}}</code>, <code>{{'{{custom.variable_name}}'}}</code>
+        </span>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Plain Text Fallback (Optional)</label>
+        <textarea id="edit-template-text" name="body_text" class="form-control"></textarea>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Add New File Attachments</label>
+        <input type="file" name="attachment_files" class="form-control" multiple>
+      </div>
+
+      <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 24px;">
+        <button type="button" class="btn btn-secondary" data-modal-close>Cancel</button>
+        <button type="submit" class="btn btn-primary">Update Template</button>
+      </div>
+    </form>
+  </div>
+</div>
 {% endblock %}
 
 {% block scripts %}
 <script>
+function openEditTemplateModal(id, name, subject, bodyHtml, bodyText) {
+  document.getElementById("edit-template-form").action = "/templates/" + id + "/edit";
+  document.getElementById("edit-template-name").value = name || "";
+  document.getElementById("edit-template-subject").value = subject || "";
+  document.getElementById("edit-template-html").value = bodyHtml || "";
+  document.getElementById("edit-template-text").value = bodyText || "";
+  document.getElementById("edit-template-modal").classList.add("active");
+}
+
 function previewTemplate(subject, bodyHtml) {
   fetch("/templates/preview", {
     method: "POST",
