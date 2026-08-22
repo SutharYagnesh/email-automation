@@ -59,6 +59,21 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     });
   });
+
+  // Client-side file upload size validation (Max 4.5 MB on Vercel)
+  document.querySelectorAll('input[type="file"]').forEach((fileInput) => {
+    fileInput.addEventListener("change", () => {
+      const maxBytes = 4.5 * 1024 * 1024; // 4.5 MB
+      let totalSize = 0;
+      for (let i = 0; i < fileInput.files.length; i++) {
+        totalSize += fileInput.files[i].size;
+      }
+      if (totalSize > maxBytes) {
+        alert("The selected file(s) size (" + (totalSize / (1024 * 1024)).toFixed(2) + " MB) exceeds the 4.5 MB limit. Please select smaller or compressed files.");
+        fileInput.value = "";
+      }
+    });
+  });
 });
 
 // Toast notification helper

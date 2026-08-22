@@ -41,8 +41,14 @@ def create_app():
     app.register_blueprint(contacts_bp)
     app.register_blueprint(senders_bp)
     app.register_blueprint(templates_bp)
-    app.register_blueprint(campaigns_bp)
     app.register_blueprint(tracking_bp)
     app.register_blueprint(settings_bp)
     
+    # 413 Request Entity Too Large error handler
+    @app.errorhandler(413)
+    def request_entity_too_large(error):
+        from flask import flash, redirect, request, url_for
+        flash("File upload size is too large. Please upload files smaller than 10 MB.", "danger")
+        return redirect(request.referrer or url_for('dashboard.index'))
+
     return app

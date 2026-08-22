@@ -18,7 +18,7 @@ class Config:
         UPLOAD_FOLDER = "/tmp"
     else:
         UPLOAD_FOLDER = os.path.join(os.path.dirname(os.path.abspath(__file__)), "app", "static", "uploads")
-    MAX_CONTENT_LENGTH = 16 * 1024 * 1024  # 16 MB max upload limit
+    MAX_CONTENT_LENGTH = 50 * 1024 * 1024  # 50 MB max upload limit
     ALLOWED_EXTENSIONS = {"csv", "xlsx", "xls", "pdf", "doc", "docx", "png", "jpg", "jpeg", "txt"}
     
     # Session config
