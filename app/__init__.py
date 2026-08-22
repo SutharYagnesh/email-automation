@@ -41,6 +41,7 @@ def create_app():
     app.register_blueprint(contacts_bp)
     app.register_blueprint(senders_bp)
     app.register_blueprint(templates_bp)
+    app.register_blueprint(campaigns_bp)
     app.register_blueprint(tracking_bp)
     app.register_blueprint(settings_bp)
     
