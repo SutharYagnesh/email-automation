@@ -18,57 +18,72 @@ def index():
 @login_required
 def add():
     user_id = session.get("user_id")
-    name = request.form.get("name", "")
-    subject = request.form.get("subject", "")
-    body_html = request.form.get("body_html", "")
-    body_text = request.form.get("body_text", "")
-    
-    # Process attachments uploaded in form
-    attachments = []
-    if "attachment_files" in request.files:
-        files = request.files.getlist("attachment_files")
-        for f in files:
-            if f and f.filename != "":
-                att_info = save_uploaded_attachment(f)
-                if att_info:
-                    attachments.append(att_info)
-                    
-    success, message, template = create_template(user_id, name, subject, body_html, body_text, attachments)
-    if success:
-        flash("Template created successfully.", "success")
-    else:
-        flash(message, "danger")
+    try:
+        name = request.form.get("name", "")
+        subject = request.form.get("subject", "")
+        body_html = request.form.get("body_html", "")
+        body_text = request.form.get("body_text", "")
+        
+        # Process attachments uploaded in form
+        attachments = []
+        if request.files and "attachment_files" in request.files:
+            try:
+                files = request.files.getlist("attachment_files")
+                for f in files:
+                    if f and hasattr(f, 'filename') and f.filename != "":
+                        att_info = save_uploaded_attachment(f)
+                        if att_info:
+                            attachments.append(att_info)
+            except Exception as fe:
+                print(f"[Template Attachment Warning]: {fe}")
+                        
+        success, message, template = create_template(user_id, name, subject, body_html, body_text, attachments)
+        if success:
+            flash("Template created successfully.", "success")
+        else:
+            flash(message, "danger")
+    except Exception as e:
+        flash(f"Error creating template: {str(e)}", "danger")
+        
     return redirect(url_for("templates.index"))
 
 @templates_bp.route("/templates/<template_id>/edit", methods=["POST"])
 @login_required
 def edit(template_id):
     user_id = session.get("user_id")
-    data = {
-        "name": request.form.get("name", ""),
-        "subject": request.form.get("subject", ""),
-        "body_html": request.form.get("body_html", ""),
-        "body_text": request.form.get("body_text", "")
-    }
-    
-    # Retain or add new attachments
-    existing = get_template_by_id(template_id, user_id)
-    attachments = existing.get("attachments", []) if existing else []
-    
-    if "attachment_files" in request.files:
-        files = request.files.getlist("attachment_files")
-        for f in files:
-            if f and f.filename != "":
-                att_info = save_uploaded_attachment(f)
-                if att_info:
-                    attachments.append(att_info)
-    data["attachments"] = attachments
-    
-    success, message = update_template(template_id, user_id, data)
-    if success:
-        flash("Template updated successfully.", "success")
-    else:
-        flash(message, "danger")
+    try:
+        data = {
+            "name": request.form.get("name", ""),
+            "subject": request.form.get("subject", ""),
+            "body_html": request.form.get("body_html", ""),
+            "body_text": request.form.get("body_text", "")
+        }
+        
+        # Retain or add new attachments
+        existing = get_template_by_id(template_id, user_id)
+        attachments = existing.get("attachments", []) if existing else []
+        
+        if request.files and "attachment_files" in request.files:
+            try:
+                files = request.files.getlist("attachment_files")
+                for f in files:
+                    if f and hasattr(f, 'filename') and f.filename != "":
+                        att_info = save_uploaded_attachment(f)
+                        if att_info:
+                            attachments.append(att_info)
+            except Exception as fe:
+                print(f"[Template Attachment Warning]: {fe}")
+                
+        data["attachments"] = attachments
+        
+        success, message = update_template(template_id, user_id, data)
+        if success:
+            flash("Template updated successfully.", "success")
+        else:
+            flash(message, "danger")
+    except Exception as e:
+        flash(f"Error updating template: {str(e)}", "danger")
+        
     return redirect(url_for("templates.index"))
 
 @templates_bp.route("/templates/<template_id>/delete", methods=["POST"])

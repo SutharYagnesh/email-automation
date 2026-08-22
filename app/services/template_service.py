@@ -119,21 +119,31 @@ def render_template_variables(text_content: str, contact_data: dict) -> str:
 
 def save_uploaded_attachment(file_storage) -> dict:
     """Save an uploaded template attachment file securely."""
-    filename = secure_filename(file_storage.filename)
-    if not filename:
-        return None
+    try:
+        if not file_storage or not hasattr(file_storage, 'filename') or not file_storage.filename:
+            return None
+            
+        filename = secure_filename(file_storage.filename)
+        if not filename:
+            return None
+            
+        folder = os.path.join(Config.UPLOAD_FOLDER, "template_attachments")
+        try:
+            os.makedirs(folder, exist_ok=True)
+        except Exception:
+            folder = "/tmp"
+            
+        unique_name = f"{int(datetime.utcnow().timestamp())}_{filename}"
+        file_path = os.path.join(folder, unique_name)
+        file_storage.save(file_path)
         
-    folder = os.path.join(Config.UPLOAD_FOLDER, "template_attachments")
-    os.makedirs(folder, exist_ok=True)
-    
-    unique_name = f"{int(datetime.utcnow().timestamp())}_{filename}"
-    file_path = os.path.join(folder, unique_name)
-    file_storage.save(file_path)
-    
-    size = os.path.getsize(file_path)
-    return {
-        "original_name": filename,
-        "saved_name": unique_name,
-        "path": file_path,
-        "size": size
-    }
+        size = os.path.getsize(file_path) if os.path.exists(file_path) else 0
+        return {
+            "original_name": filename,
+            "saved_name": unique_name,
+            "path": file_path,
+            "size": size
+        }
+    except Exception as e:
+        print(f"[Save Attachment Warning] {e}")
+        return None
